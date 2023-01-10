@@ -13,23 +13,26 @@ import {
   findReviewByIdAndDelete,
   saveNewReview,
 } from "../../lib/db/reviewsTools.js";
-import {
-  deleteProductsPicture,
-  saveProductsPictures,
-} from "../../lib/fs/tools.js";
+import { saveProductsPictures } from "../../lib/fs/tools.js";
+import { checksPostSchema, triggerBadRequest } from "./validator.js";
 
 const { NotFound } = createHttpError;
 
 const productsRouter = express.Router();
 
-productsRouter.post("/", async (req, res, next) => {
-  try {
-    const id = await saveNewProduct(req.body);
-    res.status(201).send({ id });
-  } catch (error) {
-    next(error);
+productsRouter.post(
+  "/",
+  checksPostSchema,
+  triggerBadRequest,
+  async (req, res, next) => {
+    try {
+      const id = await saveNewProduct(req.body);
+      res.status(201).send({ id });
+    } catch (error) {
+      next(error);
+    }
   }
-});
+);
 
 productsRouter.get("/", async (req, res, next) => {
   try {
