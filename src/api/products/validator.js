@@ -53,7 +53,7 @@ export const triggerBadRequest = (req, res, next) => {
   if (!errors.isEmpty()) {
     // 2.1 If we have any error --> trigger error handler 400
     next(
-      createHttpError(400, "Errors during blogPost validation", {
+      createHttpError(400, "Errors during product post validation", {
         errorsList: errors.array(),
       })
     );
