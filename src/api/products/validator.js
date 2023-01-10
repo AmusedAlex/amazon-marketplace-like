@@ -44,6 +44,29 @@ const postSchema = {
 
 export const checksPostSchema = checkSchema(postSchema);
 
+export const postReviewSchema = {
+  comment: {
+    in: ["body"],
+    isString: {
+      errorMessage: "Comment is a mandatory field and needs to be a String.",
+    },
+  },
+  rate: {
+    in: ["body"],
+    isNumeric: {
+      errorMessage: "Rate is a mandatory field and needs to be a Number.",
+    },
+  },
+  productId: {
+    in: ["body"],
+    isString: {
+      errorMessage: "ProductId is a mandatory field and needs to be a String.",
+    },
+  },
+};
+
+export const checksReviewPostSchema = checkSchema(postReviewSchema);
+
 export const triggerBadRequest = (req, res, next) => {
   // 1. Check if previous middleware ( checksPostsSchema) has detected any error in req.body
   const errors = validationResult(req);

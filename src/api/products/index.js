@@ -14,7 +14,11 @@ import {
   saveNewReview,
 } from "../../lib/db/reviewsTools.js";
 import { saveProductsPictures } from "../../lib/fs/tools.js";
-import { checksPostSchema, triggerBadRequest } from "./validator.js";
+import {
+  checksPostSchema,
+  checksReviewPostSchema,
+  triggerBadRequest,
+} from "./validator.js";
 
 const { NotFound } = createHttpError;
 
@@ -114,18 +118,23 @@ productsRouter.patch(
   }
 );
 
-productsRouter.post("/:productId/reviews", async (req, res, next) => {
-  try {
-    const product = await saveNewReview(req.params.productId, req.body);
-    if (product) {
-      res.send(product);
-    } else {
-      next(NotFound(`Product with id ${req.params.productId} not found!`));
+productsRouter.post(
+  "/:productId/reviews",
+  checksReviewPostSchema,
+  triggerBadRequest,
+  async (req, res, next) => {
+    try {
+      const product = await saveNewReview(req.params.productId, req.body);
+      if (product) {
+        res.send(product);
+      } else {
+        next(NotFound(`Product with id ${req.params.productId} not found!`));
+      }
+    } catch (error) {
+      next(error);
     }
-  } catch (error) {
-    next(error);
   }
-});
+);
 
 productsRouter.get("/:productId/reviews", async (req, res, next) => {
   try {
