@@ -7,13 +7,10 @@ import {
   notFoundHandler,
   genericErrorHandler,
 } from "./errorHandlers.js";
-import { join } from "path";
+import mongoose from "mongoose";
 
 const server = express();
-
 const port = process.env.PORT;
-
-const publicFolderPath = join(process.cwd(), "./public");
 
 // ************************************** CORS *******************
 
@@ -43,10 +40,8 @@ const corsOpts = {
   },
 };
 
-server.use(express.static(publicFolderPath));
 server.use(cors(corsOpts));
 
-server.use(cors());
 server.use(express.json());
 
 server.use("/products", productsRouter);
@@ -55,7 +50,12 @@ server.use(badRequestHandler);
 server.use(notFoundHandler);
 server.use(genericErrorHandler);
 
-server.listen(port, () => {
-  console.table(listEndpoints(server));
-  console.log(`Server is running on port ${port}`);
+mongoose.connect(process.env.MONGO_URL);
+
+mongoose.connection.on("connected", () => {
+  console.log("Successfully connected to Mongo!");
+  server.listen(port, () => {
+    console.table(listEndpoints(server));
+    console.log(`Server is running on port ${port}`);
+  });
 });

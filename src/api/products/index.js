@@ -1,46 +1,26 @@
 import express from "express";
 import createHttpError from "http-errors";
-import multer from "multer";
-import { extname } from "path";
-import {
-  saveNewProduct,
-  findProducts,
-  findProductById,
-  findProductByIdAndUpdate,
-  findProductByIdAndDelete,
-} from "../../lib/db/productsTools.js";
-import {
-  findReviewByIdAndDelete,
-  saveNewReview,
-} from "../../lib/db/reviewsTools.js";
-import { saveProductsPictures } from "../../lib/fs/tools.js";
-import {
-  checksPostSchema,
-  checksReviewPostSchema,
-  triggerBadRequest,
-} from "./validator.js";
+import ProductsModel from "./model.js";
 
 const { NotFound } = createHttpError;
 
 const productsRouter = express.Router();
 
-productsRouter.post(
-  "/",
-  checksPostSchema,
-  triggerBadRequest,
-  async (req, res, next) => {
-    try {
-      const id = await saveNewProduct(req.body);
-      res.status(201).send({ id });
-    } catch (error) {
-      next(error);
-    }
+productsRouter.post("/", async (req, res, next) => {
+  try {
+    const newProduct = new ProductsModel(req.body);
+    // here it happens validation (thanks to Mongoose) of req.body, if it is not ok Mongoose will throw an error
+    // if it is ok the product is not saved yet
+    const { _id } = await newProduct.save();
+    res.status(201).send({ _id });
+  } catch (error) {
+    next(error);
   }
-);
+});
 
 productsRouter.get("/", async (req, res, next) => {
   try {
-    const products = await findProducts();
+    const products = await ProductsModel.find();
     res.send(products);
   } catch (error) {
     next(error);
@@ -49,11 +29,19 @@ productsRouter.get("/", async (req, res, next) => {
 
 productsRouter.get("/:productId", async (req, res, next) => {
   try {
-    const product = await findProductById(req.params.productId);
+    const product = await ProductsModel.findById(req.params.productId).populate(
+      "reviews"
+    ); // .populate({path:"reviews"}) 2nd version
+
     if (product) {
       res.send(product);
     } else {
-      next(NotFound(`Product with id ${req.params.productId} not found!`));
+      next(
+        createHttpError(
+          404,
+          `Product with id ${req.params.productId} not found!`
+        )
+      );
     }
   } catch (error) {
     next(error);
@@ -62,15 +50,29 @@ productsRouter.get("/:productId", async (req, res, next) => {
 
 productsRouter.put("/:productId", async (req, res, next) => {
   try {
-    const updatedProduct = await findProductByIdAndUpdate(
-      req.params.productId,
-      req.body
+    const updatedProduct = await ProductsModel.findByIdAndUpdate(
+      req.params.productId, // WHO you want to modify
+      req.body, // HOW you want to modify
+      { new: true, runValidators: true } // options. By default findByIdAndUpdate returns the record pre-modification. If you want to get back the newly updated record you shall use new:true
+      // By default validation is off in the findByIdAndUpdate --> runValidators:true
     );
+
+    // ****** ALTERNATIVE METHOD ******
+    /*     const product = await ProductsModel.findById(req.params.productId)
+    // When you do a findById, findOne,.... you get back a MONGOOSE DOCUMENT which is NOT a normal object
+    // It is an object with superpowers, for instance it has the .save() method that will be very useful in some cases
+    product.age = 100
+    await product.save() */
 
     if (updatedProduct) {
       res.send(updatedProduct);
     } else {
-      next(NotFound(`Product with id ${req.params.productId} not found!`));
+      next(
+        createHttpError(
+          404,
+          `Product with id ${req.params.productId} not found!`
+        )
+      );
     }
   } catch (error) {
     next(error);
@@ -79,94 +81,23 @@ productsRouter.put("/:productId", async (req, res, next) => {
 
 productsRouter.delete("/:productId", async (req, res, next) => {
   try {
-    const updatedProduct = await findProductByIdAndDelete(req.params.productId);
+    const deletedProduct = await ProductsModel.findByIdAndDelete(
+      req.params.productId
+    );
 
-    if (updatedProduct) {
+    if (deletedProduct) {
       res.status(204).send();
     } else {
-      next(NotFound(`Product with id ${req.params.productId} not found!`));
+      next(
+        createHttpError(
+          404,
+          `Product with id ${req.params.productId} not found!`
+        )
+      );
     }
   } catch (error) {
     next(error);
   }
 });
-
-productsRouter.patch(
-  "/:productId/image",
-  multer().single("productPicture"),
-  async (req, res, next) => {
-    try {
-      console.log(req.file);
-      // 1. Create a unique name for that picture (something like productId.png)
-      const filename = req.params.productId + extname(req.file.originalname);
-
-      // 2. Update the product record with the image url
-      const product = await findProductByIdAndUpdate(req.params.productId, {
-        imageUrl: `/img/products/${filename}`,
-      });
-
-      if (product) {
-        // 3. Save the file into the public folder
-        await saveProductsPictures(req.file.buffer, filename);
-        res.send(product);
-      } else {
-        next(NotFound(`Product with id ${req.params.productId} not found!`));
-      }
-    } catch (error) {
-      next(error);
-    }
-  }
-);
-
-productsRouter.post(
-  "/:productId/reviews",
-  checksReviewPostSchema,
-  triggerBadRequest,
-  async (req, res, next) => {
-    try {
-      const product = await saveNewReview(req.params.productId, req.body);
-      if (product) {
-        res.send(product);
-      } else {
-        next(NotFound(`Product with id ${req.params.productId} not found!`));
-      }
-    } catch (error) {
-      next(error);
-    }
-  }
-);
-
-productsRouter.get("/:productId/reviews", async (req, res, next) => {
-  try {
-  } catch (error) {
-    next(error);
-  }
-});
-
-productsRouter.get("/:productId/reviews/:reviewId", async (req, res, next) => {
-  try {
-  } catch (error) {
-    next(error);
-  }
-});
-
-productsRouter.put("/:productId/reviews/:reviewId", async (req, res, next) => {
-  try {
-  } catch (error) {
-    next(error);
-  }
-});
-
-productsRouter.delete(
-  "/:productId/reviews/:reviewId",
-  async (req, res, next) => {
-    try {
-      await findReviewByIdAndDelete(req.params.productId, req.params.reviewId);
-      res.status(204).send();
-    } catch (error) {
-      next(error);
-    }
-  }
-);
 
 export default productsRouter;
