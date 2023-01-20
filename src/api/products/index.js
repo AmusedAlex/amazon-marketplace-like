@@ -189,6 +189,7 @@ productsRouter.put("/:productId/reviews/:reviewId", async (req, res, next) => {
         product.reviews[index] = {
           ...product.reviews[index].toObject(),
           ...req.body,
+          // rate: req.body.rate,
           updatedAt: new Date(),
         };
         await product.save();
