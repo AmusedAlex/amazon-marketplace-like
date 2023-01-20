@@ -1,7 +1,7 @@
 import express from "express";
 import createHttpError from "http-errors";
 import ProductsModel from "./model.js";
-import q2m from "query-to-mongo";
+// import q2m from "query-to-mongo";
 
 const productsRouter = express.Router();
 
