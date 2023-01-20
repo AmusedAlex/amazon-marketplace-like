@@ -10,7 +10,14 @@ const productsSchema = new Schema(
     imageUrl: { type: String, required: true },
     price: { type: Number, required: true },
     category: { type: String },
-    reviews: [], // { type: Schema.Types.ObjectId, ref: "Review" }
+    reviews: [
+      {
+        comment: { type: String, required: true },
+        rate: { type: Number, required: true, min: 1, max: 5 },
+        updatedAt: { type: Date, required: true },
+        createdAt: { type: Date, required: true },
+      },
+    ],
   },
   {
     timestamps: true, // this option automatically the createdAt and updatedAt fields

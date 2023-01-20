@@ -100,4 +100,142 @@ productsRouter.delete("/:productId", async (req, res, next) => {
   }
 });
 
+// **************** REVIEWS *******************
+
+productsRouter.post("/:productId/reviews", async (req, res, next) => {
+  try {
+    const reviewToInsert = {
+      ...req.body,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    const updatedProduct = await ProductsModel.findByIdAndUpdate(
+      req.params.productId, // WHO
+      { $push: { reviews: reviewToInsert } }, // HOW
+      { new: true, runValidators: true } // OPTIONS
+    );
+
+    if (updatedProduct) {
+      res.send(updatedProduct);
+    } else {
+      next(
+        createHttpError(
+          404,
+          `Product with id ${req.params.productId} not found!`
+        )
+      );
+    }
+  } catch (error) {
+    next(error);
+  }
+});
+productsRouter.get("/:productId/reviews", async (req, res, next) => {
+  try {
+    const product = await ProductsModel.findById(req.params.productId);
+    if (product) {
+      res.send(product.reviews);
+    } else {
+      next(
+        createHttpError(
+          404,
+          `Product with id ${req.params.productId} not found!`
+        )
+      );
+    }
+  } catch (error) {
+    next(error);
+  }
+});
+productsRouter.get("/:productId/reviews/:reviewId", async (req, res, next) => {
+  try {
+    const product = await ProductsModel.findById(req.params.productId);
+    if (product) {
+      const review = product.reviews.find(
+        (review) => review._id.toString() === req.params.reviewId
+      );
+
+      if (review) {
+        res.send(review);
+      } else {
+        next(
+          createHttpError(
+            404,
+            `Review with id ${req.params.reviewId} not found!`
+          )
+        );
+      }
+    } else {
+      next(
+        createHttpError(
+          404,
+          `Product with id ${req.params.productId} not found!`
+        )
+      );
+    }
+  } catch (error) {
+    next(error);
+  }
+});
+productsRouter.put("/:productId/reviews/:reviewId", async (req, res, next) => {
+  try {
+    const product = await ProductsModel.findById(req.params.productId);
+    if (product) {
+      const index = product.reviews.findIndex(
+        (review) => review._id.toString() === req.params.reviewId
+      );
+
+      if (index !== -1) {
+        product.reviews[index] = {
+          ...product.reviews[index].toObject(),
+          ...req.body,
+          updatedAt: new Date(),
+        };
+        await product.save();
+        res.send(product);
+      } else {
+        next(
+          createHttpError(
+            404,
+            `Review with id ${req.params.reviewId} not found!`
+          )
+        );
+      }
+    } else {
+      next(
+        createHttpError(
+          404,
+          `Product with id ${req.params.productId} not found!`
+        )
+      );
+    }
+  } catch (error) {
+    next(error);
+  }
+});
+productsRouter.delete(
+  "/:productId/reviews/:reviewId",
+  async (req, res, next) => {
+    try {
+      const updatedProduct = await ProductsModel.findByIdAndUpdate(
+        req.params.productId, // WHO
+        { $pull: { reviews: { _id: req.params.reviewId } } }, // HOW
+        { new: true }
+      );
+      if (updatedProduct) {
+        res.send(updatedProduct);
+      } else {
+        next(
+          createHttpError(
+            404,
+            `Product with id ${req.params.productId} not found!`
+          )
+        );
+      }
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
 export default productsRouter;
