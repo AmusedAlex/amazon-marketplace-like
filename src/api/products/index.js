@@ -1,8 +1,7 @@
 import express from "express";
 import createHttpError from "http-errors";
 import ProductsModel from "./model.js";
-
-const { NotFound } = createHttpError;
+import q2m from "query-to-mongo";
 
 const productsRouter = express.Router();
 
@@ -20,8 +19,26 @@ productsRouter.post("/", async (req, res, next) => {
 
 productsRouter.get("/", async (req, res, next) => {
   try {
-    const products = await ProductsModel.find();
-    res.send(products);
+    let query = {};
+    if (req.query.category) {
+      query.category = req.query.category;
+    }
+    if (req.query.price) {
+      query.price = { $lt: req.query.price };
+    }
+
+    const page = req.query.page || 1;
+    const limit = req.query.limit || 10;
+    const total = await ProductsModel.countDocuments(query);
+    const products = await ProductsModel.find(query)
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .populate("reviews");
+    res.send({
+      total,
+      totalPages: Math.ceil(total / limit),
+      products,
+    });
   } catch (error) {
     next(error);
   }
